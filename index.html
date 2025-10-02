@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastermind R1</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --accent-color: #ff9900;
+            --correct-pos-color: #00ff00;
+            --correct-num-color: #ffff00;
+            --incorrect-color: #ff0000;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: sans-serif;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 282px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .guess-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .guess-slot {
+            width: 44px;
+            height: 44px;
+            background-color: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            margin: 0 5px;
+            position: relative;
+        }
+        .feedback-dot {
+            position: absolute;
+            top: -12px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid var(--text-color);
+        }
+        .feedback-dot.green { background-color: var(--correct-pos-color); }
+        .feedback-dot.yellow { background-color: var(--correct-num-color); }
+        .feedback-dot.red { background-color: var(--incorrect-color); }
+        .number-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+            width: 100%;
+            max-width: 240px;
+            margin-top: 10px;
+        }
+        .number-button, .submit-button {
+            width: 100%;
+            height: 44px;
+            background-color: #444;
+            color: var(--text-color);
+            border: none;
+            border-radius: 8px;
+            font-size: 20px;
+        }
+        .submit-button {
+            background-color: var(--accent-color);
+            margin-top: 10px;
+        }
+        .game-history {
+            height: 80px;
+            width: 100%;
+            overflow-y: scroll;
+            margin-top: 10px;
+            padding: 5px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        .history-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        .history-slot {
+            width: 20px;
+            height: 20px;
+            background-color: #333;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            margin: 0 2px;
+        }
+        .active-slot {
+            border: 2px solid var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Mastermind</div>
+        <div class="guess-row">
+            <div class="guess-slot active-slot" id="slot-0"></div>
+            <div class="guess-slot" id="slot-1"></div>
+            <div class="guess-slot" id="slot-2"></div>
+            <div class="guess-slot" id="slot-3"></div>
+        </div>
+        <div class="game-history" id="game-history"></div>
+    </div>
+    <div class="container">
+        <div class="number-selector">
+            <button class="number-button">0</button>
+            <button class="number-button">1</button>
+            <button class="number-button">2</button>
+            <button class="number-button">3</button>
+            <button class="number-button">4</button>
+            <button class="number-button">5</button>
+            <button class="number-button">6</button>
+            <button class="number-button">7</button>
+            <button class="number-button">8</button>
+            <button class="number-button">9</button>
+        </div>
+        <button class="submit-button" id="submit-guess">Submit</button>
+    </div>
+
+    <script>
+        let secretCode = [];
+        let currentGuess = ["", "", "", ""];
+        let activeSlotIndex = 0;
+
+        function initializeGame() {
+            secretCode = Array.from({length: 4}, () => Math.floor(Math.random() * 10));
+            currentGuess = ["", "", "", ""];
+            activeSlotIndex = 0;
+            document.getElementById('game-history').innerHTML = '';
+            document.querySelectorAll('.guess-slot').forEach(slot => {
+                slot.textContent = '';
+                slot.classList.remove('active-slot');
+            });
+            document.getElementById('slot-0').classList.add('active-slot');
+            console.log("Secret Code (for dev):", secretCode.join(''));
+        }
+
+        document.querySelectorAll('.number-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                if (activeSlotIndex < 4) {
+                    const number = e.target.textContent;
+                    document.getElementById(`slot-${activeSlotIndex}`).textContent = number;
+                    currentGuess[activeSlotIndex] = parseInt(number);
+                    activeSlotIndex++;
+                    if (activeSlotIndex < 4) {
+                        document.getElementById(`slot-${activeSlotIndex - 1}`).classList.remove('active-slot');
+                        document.getElementById(`slot-${activeSlotIndex}`).classList.add('active-slot');
+                    } else {
+                        document.getElementById(`slot-3`).classList.remove('active-slot');
+                    }
+                }
+            });
+        });
+
+        document.getElementById('submit-guess').addEventListener('click', () => {
+            if (currentGuess.includes("")) {
+                return;
+            }
+
+            let feedback = ["", "", "", ""];
+            let correctPos = 0;
+            let secretCodeCopy = [...secretCode];
+            let guessCopy = [...currentGuess];
+
+            // Check for correct number in correct position (Green dots)
+            for (let i = 0; i < 4; i++) {
+                if (guessCopy[i] === secretCodeCopy[i]) {
+                    feedback[i] = 'green';
+                    correctPos++;
+                    secretCodeCopy[i] = null;
+                    guessCopy[i] = null;
+                }
+            }
+
+            // Check for correct number in wrong position (Yellow dots)
+            for (let i = 0; i < 4; i++) {
+                if (guessCopy[i] !== null) {
+                    const secretIndex = secretCodeCopy.indexOf(guessCopy[i]);
+                    if (secretIndex > -1) {
+                        feedback[i] = 'yellow';
+                        secretCodeCopy[secretIndex] = null;
+                    } else {
+                        feedback[i] = 'red';
+                    }
+                }
+            }
+
+            displayFeedback(currentGuess, feedback);
+            checkWinCondition(correctPos);
+            resetGuess();
+        });
+
+        function displayFeedback(guess, feedback) {
+            const history = document.getElementById('game-history');
+            const historyRow = document.createElement('div');
+            historyRow.className = 'history-row';
+
+            for (let i = 0; i < 4; i++) {
+                const historySlot = document.createElement('div');
+                historySlot.className = 'history-slot';
+                historySlot.textContent = guess[i];
+                const dot = document.createElement('div');
+                dot.className = `feedback-dot ${feedback[i]}`;
+                historySlot.appendChild(dot);
+                historyRow.appendChild(historySlot);
+            }
+            history.prepend(historyRow);
+        }
+
+        function checkWinCondition(correctPos) {
+            if (correctPos === 4) {
+                alert("Congratulations! You've cracked the code!");
+                initializeGame();
+            }
+        }
+
+        function resetGuess() {
+            currentGuess = ["", "", "", ""];
+            activeSlotIndex = 0;
+            document.querySelectorAll('.guess-slot').forEach(slot => {
+                slot.textContent = '';
+                slot.classList.remove('active-slot');
+            });
+            document.getElementById('slot-0').classList.add('active-slot');
+        }
+
+        // --- R1 Custom Events (for future expansion) ---
+        window.addEventListener('sideClick', () => {
+            // Can be used to trigger submit, but for now we rely on the button
+            // document.getElementById('submit-guess').click();
+        });
+
+        // Initialize the game on load
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>
