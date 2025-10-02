@@ -1,0 +1,7 @@
+{
+  "title": "Mastermind",
+  "url": "https://raw.githubusercontent.com/chaosmethod/BunnyR1Mastermind/main/index.html",
+  "description": "Guess the 4-digit number code with feedback for correct digits and positions.",
+  "iconUrl": "https://raw.githubusercontent.com/chaosmethod/BunnyR1Mastermind/main/icon.png",
+  "themeColor": "#1a1a1a"
+}
